@@ -24,6 +24,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Generate data.json
+        run: python3 scripts/gen-data.py
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
