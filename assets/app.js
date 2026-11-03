@@ -1,151 +1,122 @@
-// ===== 单一事实来源 =====
-let DATA = null;
-let STATE = {
-  provinceIdx: 0,
-  categoryIdx: 0,
-  groupIdx: 0,
-  year: '_all',
-};
+// ===== 树状目录渲染 =====
 
-// ===== 初始化 =====
 async function init() {
+  let data;
   try {
     const res = await fetch('data.json', { cache: 'no-cache' });
-    DATA = await res.json();
+    data = await res.json();
   } catch (e) {
-    document.getElementById('file-grid').innerHTML =
+    document.getElementById('tree').innerHTML =
       '<div class="loading" style="color:#f59e0b">❌ data.json 加载失败</div>';
-    console.error(e);
     return;
   }
 
-  // 生成时间戳
-  if (DATA.generated_at) {
-    const d = new Date(DATA.generated_at);
-    document.getElementById('gen-time').textContent =
-      '更新于 ' + d.toLocaleString('zh-CN');
+  // 生成时间
+  if (data.generated_at) {
+    const d = new Date(data.generated_at);
+    document.getElementById('gen-time').textContent = '更新于 ' + d.toLocaleString('zh-CN');
   }
 
-  render();
-  bindEvents();
-}
+  // 统计文件数
+  const total = countFiles(data.provinces);
+  document.getElementById('total-count').textContent = total;
 
-// ===== 渲染入口 =====
-function render() {
-  renderProvinces();
-  renderCategories();
-  renderGroups();
-  renderYearFilter();
-  renderFiles();
-}
-
-function renderProvinces() {
-  const nav = document.getElementById('province-nav');
-  nav.innerHTML = DATA.provinces.map((p, i) =>
-    `<button class="nav-chip ${i === STATE.provinceIdx ? 'active' : ''}" data-province="${i}">
-      🗺️ ${p.name}
-    </button>`
-  ).join('');
-  nav.querySelectorAll('[data-province]').forEach(el => {
-    el.onclick = () => {
-      STATE.provinceIdx = +el.dataset.province;
-      STATE.categoryIdx = 0;
-      STATE.groupIdx = 0;
-      STATE.year = '_all';
-      render();
-    };
+  // 渲染树
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  const ul = document.createElement('ul');
+  data.provinces.forEach(p => {
+    ul.appendChild(renderProvince(p));
   });
+  tree.appendChild(ul);
 }
 
-function renderCategories() {
-  const nav = document.getElementById('category-nav');
-  const p = DATA.provinces[STATE.provinceIdx];
-  nav.innerHTML = p.categories.map((c, i) =>
-    `<button class="nav-chip ${i === STATE.categoryIdx ? 'active' : ''}" data-category="${i}">
-      📂 ${c.label}
-    </button>`
-  ).join('');
-  nav.querySelectorAll('[data-category]').forEach(el => {
-    el.onclick = () => {
-      STATE.categoryIdx = +el.dataset.category;
-      STATE.groupIdx = 0;
-      STATE.year = '_all';
-      render();
-    };
-  });
+function countFiles(nodes) {
+  let c = 0;
+  for (const n of nodes) {
+    if (n.type === 'file') c++;
+    else c += countFiles(n.children);
+  }
+  return c;
 }
 
-function renderGroups() {
-  const nav = document.getElementById('group-nav');
-  const p = DATA.provinces[STATE.provinceIdx];
-  const c = p.categories[STATE.categoryIdx];
-  if (!c || !c.groups || c.groups.length <= 1) { nav.innerHTML = ''; return; }
-  nav.innerHTML = c.groups.map((g, i) =>
-    `<button class="nav-chip ${i === STATE.groupIdx ? 'active' : ''}" data-group="${i}">
-      🏷️ ${g.label}
-    </button>`
-  ).join('');
-  nav.querySelectorAll('[data-group]').forEach(el => {
-    el.onclick = () => { STATE.groupIdx = +el.dataset.group; STATE.year = '_all'; render(); };
-  });
+function renderProvince(p) {
+  const li = document.createElement('li');
+  const row = document.createElement('div');
+  row.className = 'node-row dir expanded';
+  row.innerHTML = `
+    <span class="toggle expanded">▶</span>
+    <span class="icon">🗺️</span>
+    <span class="node-label">${escapeHtml(p.name)}</span>
+    <span class="file-meta">${countFiles(p.children)} 份</span>
+  `;
+  row.addEventListener('click', () => toggleDir(li));
+  li.appendChild(row);
+
+  const ul = document.createElement('ul');
+  p.children.forEach(n => ul.appendChild(renderNode(n)));
+  li.appendChild(ul);
+  return li;
 }
 
-function renderYearFilter() {
-  const p = DATA.provinces[STATE.provinceIdx];
-  const c = p.categories[STATE.categoryIdx];
-  const group = c.groups[STATE.groupIdx];
-  if (!group) return;
+function renderNode(node) {
+  const li = document.createElement('li');
 
-  const years = [...new Set(group.files.map(f => f.year))].sort().reverse();
-  const chips = ['<button class="year-chip ' + (STATE.year === '_all' ? 'active' : '') + '" data-year="_all">全部</button>']
-    .concat(years.map(y =>
-      `<button class="year-chip ${y === STATE.year ? 'active' : ''}" data-year="${y}">${y}</button>`
-    ));
-  document.getElementById('year-filter').innerHTML = chips.join('');
-  document.querySelectorAll('.year-chip').forEach(el => {
-    el.onclick = () => { STATE.year = el.dataset.year; renderFiles(); renderYearFilter(); };
-  });
-}
-
-function renderFiles() {
-  const p = DATA.provinces[STATE.provinceIdx];
-  const c = p.categories[STATE.categoryIdx];
-  const group = c.groups[STATE.groupIdx];
-
-  let files = group.files.slice();
-  if (STATE.year !== '_all') files = files.filter(f => f.year === STATE.year);
-  files.sort((a, b) => b.year.localeCompare(a.year));
-
-  const grid = document.getElementById('file-grid');
-  grid.innerHTML = files.map(f => {
-    const sizeKB = (f.size / 1024).toFixed(1);
-    const viewerUrl = `viewer.html?path=${encodeURIComponent(f.path)}&name=${encodeURIComponent(f.name + f.ext)}`;
-    return `
-      <a class="file-card" href="${viewerUrl}">
-        <div class="card-head">
-          <span class="year-tag">${f.year}</span>
-          <span class="ext-tag">${f.ext.replace('.','')}</span>
-        </div>
-        <div class="card-title">${escapeHtml(f.name)}</div>
-        <div class="card-meta">
-          <span>${sizeKB} KB</span>
-          <span>点击预览 →</span>
-        </div>
-      </a>
+  if (node.type === 'dir') {
+    const row = document.createElement('div');
+    row.className = 'node-row dir collapsed'; // 默认折叠
+    row.innerHTML = `
+      <span class="toggle">▶</span>
+      <span class="icon">📁</span>
+      <span class="node-label">${escapeHtml(node.name)}</span>
+      <span class="file-meta">${countFiles(node.children)}</span>
     `;
-  }).join('');
+    row.addEventListener('click', () => toggleDir(li));
+    li.appendChild(row);
 
-  document.getElementById('total-count').textContent = files.length;
+    const ul = document.createElement('ul');
+    node.children.forEach(c => ul.appendChild(renderNode(c)));
+    li.appendChild(ul);
+  } else {
+    // file
+    const row = document.createElement('div');
+    row.className = 'node-row file';
+    const sizeKB = (node.size / 1024).toFixed(0);
+    row.innerHTML = `
+      <span class="toggle leaf">▶</span>
+      <span class="icon">📄</span>
+      <span class="node-label">${escapeHtml(node.name)}</span>
+      <span class="ext-badge">${node.ext.replace('.', '')}</span>
+      <span class="file-meta">${node.year} · ${sizeKB}KB</span>
+    `;
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.open(encodeURI(node.path), '_blank', 'noopener');
+    });
+    li.appendChild(row);
+  }
+
+  return li;
 }
 
-// ===== Helpers =====
+function toggleDir(li) {
+  const row = li.querySelector(':scope > .node-row');
+  const toggle = row.querySelector('.toggle');
+  if (li.classList.contains('collapsed')) {
+    li.classList.remove('collapsed');
+    li.classList.add('expanded');
+    toggle.classList.add('expanded');
+  } else {
+    li.classList.add('collapsed');
+    li.classList.remove('expanded');
+    toggle.classList.remove('expanded');
+  }
+}
+
 function escapeHtml(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-function bindEvents() {}
-
-// ===== 启动 =====
 init();
