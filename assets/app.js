@@ -119,9 +119,15 @@ function renderFiles() {
   const grid = document.getElementById('file-grid');
   grid.innerHTML = files.map(f => {
     const sizeKB = (f.size / 1024).toFixed(1);
+    const rawUrl = encodeURI(f.path);
     const viewerUrl = `viewer.html?path=${encodeURIComponent(f.path)}&name=${encodeURIComponent(f.name + f.ext)}`;
+    // PDF → 新标签页直接打开（浏览器原生 PDF 预览最稳定）
+    // DOC/DOCX → 走 viewer.html 用 Google Docs Viewer
+    const cardHref = f.ext.toLowerCase() === '.pdf' ? rawUrl : viewerUrl;
+    const cardTarget = f.ext.toLowerCase() === '.pdf' ? ' target="_blank" rel="noopener"' : '';
+    const actionText = f.ext.toLowerCase() === '.pdf' ? '点击预览（新窗口） →' : '点击预览 →';
     return `
-      <a class="file-card" href="${viewerUrl}">
+      <a class="file-card" href="${cardHref}"${cardTarget}>
         <div class="card-head">
           <span class="year-tag">${f.year}</span>
           <span class="ext-tag">${f.ext.replace('.','')}</span>
@@ -129,7 +135,7 @@ function renderFiles() {
         <div class="card-title">${escapeHtml(f.name)}</div>
         <div class="card-meta">
           <span>${sizeKB} KB</span>
-          <span>点击预览 →</span>
+          <span>${actionText}</span>
         </div>
       </a>
     `;

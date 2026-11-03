@@ -48,18 +48,34 @@
 
   titleEl.textContent = decodeURIComponent(name);
 
-  if (path) {
+  if (!path) {
+    titleEl.textContent = '未指定文件';
+  } else {
     const url = encodeURI(path);
     downloadBtn.href = url;
-    // PDF 浏览器原生预览
+
     if (path.toLowerCase().endsWith('.pdf')) {
-      frame.src = url;
+      // PDF → 直接用浏览器原生预览（跳转，不走 iframe）
+      titleEl.textContent = '即将打开：' + decodeURIComponent(name);
+      // 顶部保留"返回目录"按钮，中间显示提示
+      document.querySelector('.viewer-wrap').innerHTML =
+        '<div class="viewer-top">' +
+        '  <a class="btn" href="index.html">← 返回目录</a>' +
+        '  <div class="viewer-title">正在跳转 PDF 预览...</div>' +
+        '  <a class="btn btn-primary" href="' + url + '" download>⬇ 下载</a>' +
+        '</div>' +
+        '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:var(--text-secondary);padding:40px;">' +
+        '  <div style="font-size:48px;">📄</div>' +
+        '  <div style="font-size:16px;">浏览器即将打开 PDF 预览</div>' +
+        '  <a class="btn btn-primary" href="' + url + '">如果没有自动打开，点击这里 →</a>' +
+        '</div>';
+      // 延迟跳转，让用户看到顶部导航
+      setTimeout(function() { window.location.href = url; }, 300);
     } else {
-      // DOC/DOCX → Google Docs Viewer 在线预览
-      frame.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(location.origin + location.pathname.replace('viewer.html', '') + path) + '&embedded=true';
+      // DOC/DOCX → Google Docs Viewer
+      const baseUrl = location.origin + location.pathname.replace('viewer.html', '');
+      frame.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(baseUrl + path) + '&embedded=true';
     }
-  } else {
-    titleEl.textContent = '未指定文件';
   }
 </script>
 </body>
