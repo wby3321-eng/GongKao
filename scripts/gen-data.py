@@ -45,7 +45,7 @@ def scan_dir(dir_path: Path, base: Path) -> list:
         f for f in dir_path.iterdir()
         if f.is_file() and f.suffix.lower() in SUPPORTED_EXTS
         and not f.name.startswith(".")
-    ])
+    ], key=lambda f: extract_year(f.name), reverse=True)  # 年份倒序
 
     # 子目录节点
     for sd in subdirs:
