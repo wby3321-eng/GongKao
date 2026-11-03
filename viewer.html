@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件预览</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  html, body { height: 100%; margin: 0; background: var(--bg); }
+  .viewer-wrap { display: flex; flex-direction: column; height: 100vh; }
+  .viewer-top {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .viewer-title { flex: 1; font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .viewer-iframe { flex: 1; border: 0; width: 100%; }
+  .btn {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font-size: 13px;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--border); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .viewer-error {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+<div class="viewer-wrap">
+  <div class="viewer-top">
+    <a class="btn" href="index.html">← 返回目录</a>
+    <div class="viewer-title" id="file-title">加载中...</div>
+    <a class="btn btn-primary" id="download-btn" href="#" download>⬇ 下载</a>
+  </div>
+  <iframe id="viewer-frame" class="viewer-iframe" title="文档预览"></iframe>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const path = params.get('path');
+  const name = params.get('name') || path || '未知文件';
+  const titleEl = document.getElementById('file-title');
+  const frame = document.getElementById('viewer-frame');
+  const downloadBtn = document.getElementById('download-btn');
+
+  titleEl.textContent = decodeURIComponent(name);
+
+  if (path) {
+    const url = encodeURI(path);
+    downloadBtn.href = url;
+    // PDF 浏览器原生预览
+    if (path.toLowerCase().endsWith('.pdf')) {
+      frame.src = url;
+    } else {
+      // DOC/DOCX → Google Docs Viewer 在线预览
+      frame.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(location.origin + location.pathname.replace('viewer.html', '') + path) + '&embedded=true';
+    }
+  } else {
+    titleEl.textContent = '未指定文件';
+  }
+</script>
+</body>
+</html>
