@@ -108,41 +108,140 @@ function renderHome() {
 function renderTree() {
   const prov = DATA.provinces.find((p) => p.name === currentProv);
   const ul = document.createElement('ul');
-  ul.appendChild(treeNode(prov.root, true));
-  $('tree').innerHTML = `<div class="group-title">${currentProv} / 重点知识</div>`;
+  ul.appendChild(treeNode(prov.root, ['重点知识']));
+  $('tree').innerHTML = `
+    <div class="group-title">
+      <span>${currentProv} / 重点知识</span>
+      <span class="tree-tools">
+        <button type="button" data-act="expand">展开</button>
+        <button type="button" data-act="collapse">收起</button>
+      </span>
+    </div>`;
   $('tree').appendChild(ul);
+  $('tree').querySelector('[data-act="expand"]').onclick = () => setAllOpen(true);
+  $('tree').querySelector('[data-act="collapse"]').onclick = () => setAllOpen(false);
 }
-function treeNode(node, isRoot = false) {
+function setAllOpen(open) {
+  $('tree').querySelectorAll('li').forEach((li) => li.classList.toggle('open', open));
+  $('tree').querySelectorAll('.caret').forEach((c) => c.classList.toggle('open', open));
+}
+function treeNode(node, path) {
   const li = document.createElement('li');
+  li.dataset.path = path.join('/');
   const row = document.createElement('div');
   row.className = 'row';
   if (node.type === 'dir') {
     const n = countFiles(node);
     row.innerHTML = `<span class="caret">▶</span><span class="ico">📁</span><span class="label">${node.name}</span>${n ? `<span class="meta">${n}</span>` : ''}`;
+    // 默认全部展开：子目录直接展示在父目录下方
     li.classList.add('open');
     row.querySelector('.caret').classList.add('open');
     row.onclick = () => {
       li.classList.toggle('open');
       row.querySelector('.caret').classList.toggle('open');
+      markActive(path);
+      openDir(node, path);
     };
+    // 先放父目录行，再放子目录列表，保证子目录在父目录下方
+    li.appendChild(row);
     const ul = document.createElement('ul');
-    (node.children || []).forEach((c) => ul.appendChild(treeNode(c)));
+    (node.children || []).forEach((c) => ul.appendChild(treeNode(c, [...path, c.name])));
     li.appendChild(ul);
+    return li;
   } else {
     row.innerHTML = `<span class="caret leaf">·</span><span class="ico">${/\.md$/i.test(node.name) ? '📝' : '🖼️'}</span><span class="label">${node.name}</span>`;
     row.onclick = (e) => {
       e.stopPropagation();
-      openFile(node);
+      markActive(path);
+      openFile({ ...node, path });
     };
+    li.appendChild(row);
+    return li;
   }
-  li.appendChild(row);
-  return li;
+}
+function markActive(path) {
+  const key = path.join('/');
+  document.querySelectorAll('#tree .row').forEach((r) => {
+    const li = r.parentElement;
+    r.classList.toggle('active', li && li.dataset.path === key);
+  });
+}
+// 展开到指定路径（含祖先）
+function revealPath(path) {
+  const key = path.join('/');
+  const li = $('tree').querySelector(`li[data-path="${CSS.escape(key)}"]`);
+  if (!li) return;
+  let p = li.parentElement;
+  while (p && p.tagName === 'LI') {
+    p.classList.add('open');
+    const c = p.querySelector(':scope > .row .caret');
+    if (c) c.classList.add('open');
+    p = p.parentElement;
+  }
+  li.classList.add('open');
+  const c = li.querySelector(':scope > .row .caret');
+  if (c) c.classList.add('open');
+  markActive(path);
+  li.scrollIntoView({ block: 'nearest' });
 }
 
 /* ===== 模块 / 文件 ===== */
 function currentProvObj() {
   return DATA.provinces.find((p) => p.name === currentProv);
 }
+// 点击目录：右侧展示该目录内容（子目录 + 笔记）
+function openDir(node, path) {
+  currentFile = null;
+  const subs = (node.children || []).filter((c) => c.type === 'dir');
+  const mds = (node.children || []).filter((c) => c.type === 'file' && /\.md$/i.test(c.name));
+  const leaf = isKnowledgeLeaf(node);
+  const stat = leaf
+    ? mds.length ? `已归纳 ${mds.length} 篇笔记` : '该知识点暂无笔记'
+    : `共 ${countFiles(node)} 篇笔记 · ${subs.length} 个子目录`;
+  $('content').className = 'content doc';
+  $('content').innerHTML = `
+    <div class="crumb">${[currentProv, ...path].map((p) => `<span>${p}</span>`).join(' / ')}</div>
+    <div class="markdown-body">
+      <h1>📁 ${node.name}</h1>
+      <p style="color:var(--muted)">${stat}</p>
+      ${subs.length ? `<h2>子目录</h2><ul>${subs.map((c) => `<li><a href="#" data-dir="${[...path, c.name].join('/')}" style="color:var(--accent)">${c.name}</a> <span style="font-size:12px;color:var(--muted)">${countFiles(c)} 篇</span></li>`).join('')}</ul>` : ''}
+      ${mds.length ? `<h2>笔记</h2><ul>${mds.map((c) => `<li><a href="#" data-file="${[...path, c.name].join('/')}" style="color:var(--accent)">${c.name.replace(/\.md$/i, '')}</a></li>`).join('')}</ul>` : ''}
+    </div>`;
+  $('content').querySelectorAll('[data-dir]').forEach((a) => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      const target = findNode(a.dataset.dir);
+      if (target) {
+        revealPath(target.path);
+        openDir(target.node, target.path);
+      }
+    };
+  });
+  $('content').querySelectorAll('[data-file]').forEach((a) => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      const f = collectFiles(currentProvObj().root).find((x) => x.path.join('/') === a.dataset.file);
+      if (f) {
+        revealPath(f.path);
+        openFile(f);
+      }
+    };
+  });
+}
+// 按全路径查找目录节点
+function findNode(key) {
+  const segs = key.split('/');
+  let node = currentProvObj().root;
+  const path = ['重点知识'];
+  if (segs[0] !== '重点知识') return null;
+  for (let i = 1; i < segs.length; i++) {
+    node = (node.children || []).find((c) => c.name === segs[i] && c.type === 'dir');
+    if (!node) return null;
+    path.push(node.name);
+  }
+  return { node, path };
+}
+
 function openModule(name) {
   const root = currentProvObj().root;
   const mod = (root.children || []).find((m) => m.name === name);
@@ -187,7 +286,6 @@ function openFile(file) {
       <div class="crumb">${file.path.slice(0, -1).map((p) => `<span>${p}</span>`).join(' / ')}</div>
       <div class="markdown-body"><img src="${file.path}" alt="${file.name}"></div>`;
   }
-  document.querySelectorAll('#tree .row').forEach((r) => r.classList.remove('active'));
 }
 
 // 把 md 中相对图片路径解析为相对于文件所在目录（Pages 根路径）
@@ -230,7 +328,7 @@ function renderTreeFiltered(hits) {
     return;
   }
   const ul = document.createElement('ul');
-  ul.appendChild(treeNode(root, true));
+  ul.appendChild(treeNode(root, ['重点知识']));
   ul.querySelectorAll('li').forEach((li) => li.classList.add('open'));
   ul.querySelectorAll('.caret').forEach((c) => c.classList.add('open'));
   $('tree').innerHTML = '';
@@ -275,9 +373,9 @@ function highlightSearch(html) {
 function renderMindmap() {
   $('content').className = 'content';
   $('content').innerHTML = '<div class="mindmap-wrap"><div class="mindmap" id="mm"></div></div>';
-  $('mm').appendChild(mmNode(currentProvObj().root, 0));
+  $('mm').appendChild(mmNode(currentProvObj().root, 0, ['重点知识']));
 }
-function mmNode(node, depth) {
+function mmNode(node, depth, path) {
   const wrap = document.createElement('div');
   wrap.className = 'mm-node';
   const label = document.createElement('div');
@@ -288,7 +386,14 @@ function mmNode(node, depth) {
   if (leaf) cls += leafHasMd(node) ? ' done' : ' pending';
   label.className = cls;
   label.textContent = node.name.replace(/\.md$/i, '');
-  if (leaf) label.onclick = () => { switchView('knowledge'); openModule(node.name); };
+  // 最底层知识点：点击跳转到「知识」视图下对应目录
+  if (leaf) {
+    label.onclick = () => {
+      switchView('knowledge');
+      revealPath(path);
+      openDir(node, path);
+    };
+  }
   wrap.appendChild(label);
   if (node.children && node.children.length) {
     const ch = document.createElement('div');
@@ -297,7 +402,7 @@ function mmNode(node, depth) {
       if (c.type === 'file') return; // 脑图只展示目录结构，不展示具体文件
       const b = document.createElement('div');
       b.className = 'mm-branch';
-      b.appendChild(mmNode(c, depth + 1));
+      b.appendChild(mmNode(c, depth + 1, [...path, c.name]));
       ch.appendChild(b);
     });
     if (ch.children.length) wrap.appendChild(ch);

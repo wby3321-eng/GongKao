@@ -23,7 +23,7 @@ body {
 /* ===== Topbar ===== */
 .topbar {
   display: flex; align-items: center; gap: 18px;
-  padding: 0 24px; height: 60px;
+  padding: 10px 24px; min-height: 60px;
   background: var(--surface);
   border-bottom: 1px solid var(--rule);
   position: sticky; top: 0; z-index: 50; flex-wrap: wrap;
@@ -117,7 +117,16 @@ body {
 
 /* ===== Tree ===== */
 .tree { font-size: 13.5px; }
-.tree .group-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 8px 18px 4px; }
+.tree .group-title {
+  font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+  padding: 8px 14px 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.tree-tools { display: flex; gap: 4px; }
+.tree-tools button {
+  font-size: 11px; padding: 2px 8px; border: 1px solid var(--rule); background: #fff;
+  border-radius: 6px; color: var(--ink-2); cursor: pointer; line-height: 1.4;
+}
+.tree-tools button:hover { color: var(--accent); border-color: var(--accent); }
 .tree ul { list-style: none; }
 .tree li > .row {
   display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 8px; margin: 0 6px;
@@ -132,7 +141,10 @@ body {
 .tree .label { overflow: hidden; text-overflow: ellipsis; }
 .tree .meta { margin-left: auto; font-size: 10px; color: var(--muted); flex-shrink: 0; }
 .tree ul ul { display: none; }
-.tree li.open > ul { display: block; padding-left: 14px; }
+.tree li.open > ul {
+  display: block; margin-left: 16px; padding-left: 6px;
+  border-left: 1px dashed var(--rule);
+}
 .tree mark { background: transparent; color: var(--accent); font-weight: 600; border-bottom: 1px solid var(--accent); }
 
 /* ===== Markdown content ===== */
