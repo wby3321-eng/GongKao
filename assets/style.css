@@ -169,23 +169,44 @@ body {
 .markdown-body mark { background: rgba(20,184,166,0.18); color: var(--ink); padding: 0 2px; border-radius: 2px; }
 .empty { color: var(--muted); text-align: center; padding: 60px 20px; }
 
-/* ===== Mindmap ===== */
+/* ===== Mindmap（中心根节点，向两侧发散）===== */
 .mindmap-wrap { width: 100%; height: 100%; overflow: auto; padding: 30px; background: var(--surface); border-radius: 12px; }
-.mindmap { display: inline-block; }
-.mm-node { display: inline-flex; align-items: center; white-space: nowrap; }
+.mindmap { display: inline-block; padding: 10px 0; }
+.mm-center { display: flex; align-items: center; gap: 40px; }
+.mm-side { display: flex; flex-direction: column; gap: 16px; }
+.mm-side.left { align-items: flex-end; }
+.mm-side.right { align-items: flex-start; }
 .mm-label {
   padding: 6px 14px; border-radius: 8px; font-size: 13px; background: var(--surface-2);
-  border: 1px solid var(--rule); cursor: pointer; transition: all .15s;
+  border: 1px solid var(--rule); cursor: pointer; transition: all .15s; white-space: nowrap;
 }
-.mm-label:hover { border-color: var(--accent); color: var(--accent); }
-.mm-label.root { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; border: none; }
-.mm-label.lv1 { background: #fff; font-weight: 600; border-color: var(--accent); color: var(--accent); }
+.mm-label:hover { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.mm-label.root {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff !important;
+  font-weight: 700; border: none; font-size: 14px; padding: 10px 20px; cursor: default;
+}
+.mm-label.lv1 { background: #fff; font-weight: 600; }
 .mm-label.done { color: var(--green); border-style: dashed; border-color: var(--green); }
-.mm-label.pending { color: var(--muted); border-style: dashed; }
-.mm-children { display: inline-flex; flex-direction: column; margin-left: 24px; gap: 8px; position: relative; }
-.mm-children::before { content: ''; position: absolute; left: -12px; top: 0; bottom: 0; width: 1px; background: var(--rule); }
-.mm-branch { position: relative; display: flex; align-items: center; }
-.mm-branch::before { content: ''; position: absolute; left: -12px; top: 50%; width: 12px; height: 1px; background: var(--rule); }
+.mm-label.pending { color: var(--muted); border-style: dashed; border-color: var(--rule); }
+.mmn { display: flex; align-items: center; }
+.mmn.left { flex-direction: row-reverse; }
+.mmn-children { display: flex; flex-direction: column; gap: 10px; position: relative; }
+.mmn.right > .mmn-children { margin-left: 22px; }
+.mmn.left > .mmn-children { margin-right: 22px; align-items: flex-end; }
+.mmn.right > .mmn-children > .mmn { position: relative; }
+.mmn.right > .mmn-children > .mmn::before {
+  content: ''; position: absolute; left: -22px; top: 50%; width: 22px; height: 1px; background: var(--rule);
+}
+.mmn.left > .mmn-children > .mmn { position: relative; }
+.mmn.left > .mmn-children > .mmn::after {
+  content: ''; position: absolute; right: -22px; top: 50%; width: 22px; height: 1px; background: var(--rule);
+}
+.mmn.right > .mmn-children::before {
+  content: ''; position: absolute; left: -11px; top: 14px; bottom: 14px; width: 1px; background: var(--rule);
+}
+.mmn.left > .mmn-children::before {
+  content: ''; position: absolute; right: -11px; top: 14px; bottom: 14px; width: 1px; background: var(--rule);
+}
 
 @media (max-width: 900px) {
   .sidebar { width: 200px; }

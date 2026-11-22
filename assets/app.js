@@ -369,45 +369,52 @@ function highlightSearch(html) {
   return html.replace(/<[^>]+>/g, (m) => '\x00' + m + '\x01').replace(re, '<mark>$1</mark>').replace(/\x00([\s\S]*?)\x01/g, '$1');
 }
 
-/* ===== 脑图视图 ===== */
+/* ===== 脑图视图（中心根节点，向两侧发散）===== */
 function renderMindmap() {
+  const root = currentProvObj().root;
+  const mods = (root.children || []).filter((c) => c.type === 'dir');
+  const half = Math.ceil(mods.length / 2);
+  const rightMods = mods.slice(0, half);
+  const leftMods = mods.slice(half);
   $('content').className = 'content';
-  $('content').innerHTML = '<div class="mindmap-wrap"><div class="mindmap" id="mm"></div></div>';
-  $('mm').appendChild(mmNode(currentProvObj().root, 0, ['重点知识']));
-}
-function mmNode(node, depth, path) {
-  const wrap = document.createElement('div');
-  wrap.className = 'mm-node';
-  const label = document.createElement('div');
-  let cls = 'mm-label';
-  if (depth === 0) cls += ' root';
-  else if (depth === 1) cls += ' lv1';
-  const leaf = isKnowledgeLeaf(node);
-  if (leaf) cls += leafHasMd(node) ? ' done' : ' pending';
-  label.className = cls;
-  label.textContent = node.name.replace(/\.md$/i, '');
+  $('content').innerHTML = `
+    <div class="mindmap-wrap">
+      <div class="mindmap">
+        <div class="mm-center">
+          <div class="mm-side left">${leftMods.map((m) => mmHtml(m, 1, ['重点知识', m.name], 'left')).join('')}</div>
+          <div class="mm-label root">${root.name}</div>
+          <div class="mm-side right">${rightMods.map((m) => mmHtml(m, 1, ['重点知识', m.name], 'right')).join('')}</div>
+        </div>
+      </div>
+    </div>`;
   // 最底层知识点：点击跳转到「知识」视图下对应目录
-  if (leaf) {
-    label.onclick = () => {
+  $('content').querySelectorAll('[data-jump]').forEach((el) => {
+    el.onclick = () => {
+      const path = el.dataset.jump.split('/');
+      const target = findNode(el.dataset.jump);
       switchView('knowledge');
       revealPath(path);
-      openDir(node, path);
+      if (target) openDir(target.node, target.path);
     };
+  });
+}
+function mmHtml(node, depth, path, dir) {
+  const leaf = isKnowledgeLeaf(node);
+  let cls = 'mm-label';
+  if (depth === 1) cls += ' lv1';
+  if (leaf) cls += leafHasMd(node) ? ' done' : ' pending';
+  let style = '';
+  if (depth === 1) {
+    const [color] = moduleMeta(node.name);
+    style = ` style="border-color:${color};color:${color}"`;
   }
-  wrap.appendChild(label);
-  if (node.children && node.children.length) {
-    const ch = document.createElement('div');
-    ch.className = 'mm-children';
-    node.children.forEach((c) => {
-      if (c.type === 'file') return; // 脑图只展示目录结构，不展示具体文件
-      const b = document.createElement('div');
-      b.className = 'mm-branch';
-      b.appendChild(mmNode(c, depth + 1, [...path, c.name]));
-      ch.appendChild(b);
-    });
-    if (ch.children.length) wrap.appendChild(ch);
-  }
-  return wrap;
+  const jump = leaf ? ` data-jump="${path.join('/')}"` : '';
+  const label = `<div class="${cls}"${style}${jump}>${node.name.replace(/\.md$/i, '')}</div>`;
+  const kids = (node.children || []).filter((c) => c.type === 'dir');
+  const children = kids.length
+    ? `<div class="mmn-children">${kids.map((c) => mmHtml(c, depth + 1, [...path, c.name], dir)).join('')}</div>`
+    : '';
+  return `<div class="mmn ${dir}">${label}${children}</div>`;
 }
 
 function switchView(v) {

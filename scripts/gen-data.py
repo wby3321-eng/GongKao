@@ -34,17 +34,50 @@ def is_hidden(name: str) -> bool:
     return name.startswith(".")
 
 
+# 粉笔教材顺序：同名父目录下的子项按此表排列，未列出的按名称排在后面
+ORDER_MAP = {
+    "__root__": ["政治理论", "常识判断", "言语理解与表达", "数量关系", "判断推理", "资料分析", "科学推理", "申论"],
+    "常识判断": ["法律", "科技", "人文历史", "地理", "经济", "管理", "公文"],
+    "言语理解与表达": ["逻辑填空", "片段阅读", "语句表达", "篇章阅读"],
+    "数量关系": ["数学运算", "数字推理"],
+    "数学运算": ["工程问题", "行程问题", "容斥原理", "排列组合与概率", "经济利润", "几何问题", "最值问题", "浓度问题"],
+    "判断推理": ["图形推理", "定义判断", "类比推理", "逻辑判断"],
+    "图形推理": ["位置规律", "样式规律", "数量规律", "特殊规律", "空间类"],
+    "定义判断": ["单定义", "多定义"],
+    "类比推理": ["语义关系", "逻辑关系", "语法关系"],
+    "逻辑判断": ["翻译推理", "组合排列", "削弱", "加强", "日常结论"],
+    "资料分析": ["速算技巧", "简单计算", "增长量", "增长率", "比重", "平均数", "倍数", "综合分析"],
+    "科学推理": ["物理", "化学", "生物"],
+    "物理": ["力学", "电学", "光学", "热学"],
+    "申论": ["单一题", "综合题", "公文题", "作文题"],
+}
+
+
+def sort_key(parent_key: str):
+    """返回排序函数：优先按教材顺序表，未列出的按名称排在其后。"""
+    order = ORDER_MAP.get(parent_key, [])
+
+    def key(p: Path):
+        name = p.stem if p.is_file() else p.name
+        idx = order.index(name) if name in order else len(order)
+        return (idx, name)
+
+    return key
+
+
 def scan_dir(dir_path: Path, base: Path) -> list:
-    """递归扫描目录，返回子节点列表（目录在前，文件在后；均按名称排序）。"""
+    """递归扫描目录，返回子节点列表（目录在前，文件在后；按粉笔教材顺序排列）。"""
     nodes = []
+    parent_key = "__root__" if dir_path.name == FOCUS else dir_path.name
+    key = sort_key(parent_key)
 
     subdirs = sorted(
         [d for d in dir_path.iterdir() if d.is_dir() and not is_hidden(d.name)],
-        key=lambda p: p.name,
+        key=key,
     )
     files = sorted(
         [f for f in dir_path.iterdir() if f.is_file() and not is_hidden(f.name)],
-        key=lambda p: p.name,
+        key=key,
     )
 
     for sd in subdirs:
