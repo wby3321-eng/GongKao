@@ -99,7 +99,7 @@ function renderHome() {
         <div class="lbl" style="margin-top:6px">已完成 ${d.done} / 总 ${d.total} 个知识点</div>
       </div>
     </div>
-    <h2>${currentProv} · 重点知识模块</h2>
+    <h2>${currentProv} · 模块</h2>
     <div class="cards">${cards || '<div class="empty">暂无模块</div>'}</div>`;
   document.querySelectorAll('.card').forEach((c) => (c.onclick = () => openModule(c.dataset.module)));
 }
@@ -111,7 +111,7 @@ function renderTree() {
   ul.appendChild(treeNode(prov.root, ['重点知识']));
   $('tree').innerHTML = `
     <div class="group-title">
-      <span>${currentProv} / 重点知识</span>
+      <span>${currentProv}</span>
       <span class="tree-tools">
         <button type="button" data-act="expand">展开</button>
         <button type="button" data-act="collapse">收起</button>
@@ -132,7 +132,9 @@ function treeNode(node, path) {
   row.className = 'row';
   if (node.type === 'dir') {
     const n = countFiles(node);
-    row.innerHTML = `<span class="caret">▶</span><span class="ico">📁</span><span class="label">${node.name}</span>${n ? `<span class="meta">${n}</span>` : ''}`;
+    // 根节点用省份名展示，不显示「重点知识」文字
+    const displayName = path.length === 1 ? currentProv : node.name;
+    row.innerHTML = `<span class="caret">▶</span><span class="ico">📁</span><span class="label">${displayName}</span>${n ? `<span class="meta">${n}</span>` : ''}`;
     // 默认全部展开：子目录直接展示在父目录下方
     li.classList.add('open');
     row.querySelector('.caret').classList.add('open');
@@ -189,6 +191,13 @@ function revealPath(path) {
 function currentProvObj() {
   return DATA.provinces.find((p) => p.name === currentProv);
 }
+// 面包屑：去掉「重点知识」这一层
+function crumbOf(parts) {
+  return parts
+    .filter((p) => p !== '重点知识')
+    .map((p) => `<span>${p}</span>`)
+    .join(' / ');
+}
 // 点击目录：右侧展示该目录内容（子目录 + 笔记）
 function openDir(node, path) {
   currentFile = null;
@@ -200,7 +209,7 @@ function openDir(node, path) {
     : `共 ${countFiles(node)} 篇笔记 · ${subs.length} 个子目录`;
   $('content').className = 'content doc';
   $('content').innerHTML = `
-    <div class="crumb">${[currentProv, ...path].map((p) => `<span>${p}</span>`).join(' / ')}</div>
+    <div class="crumb">${crumbOf([currentProv, ...path])}</div>
     <div class="markdown-body">
       <h1>📁 ${node.name}</h1>
       <p style="color:var(--muted)">${stat}</p>
@@ -255,7 +264,7 @@ function openModule(name) {
   const mstat = prov.progress.modules.find((m) => m.name === name) || { done: 0, total: 0 };
   $('content').className = 'content doc';
   $('content').innerHTML = `
-    <div class="crumb">${currentProv} <span>/</span> 重点知识 <span>/</span> ${name}</div>
+    <div class="crumb">${currentProv} <span>/</span> ${name}</div>
     <div class="markdown-body">
       <h1>${moduleMeta(name)[1]} ${name}</h1>
       <p style="color:var(--muted)">复习进度：${mstat.done} / ${mstat.total} 个知识点已归纳笔记</p>
@@ -277,13 +286,13 @@ function openFile(file) {
     const html = resolveImages(highlightSearch(marked.parse(file.content || '')), file.path);
     const gh = `https://github.com/wby3321-eng/GongKao/blob/main/${file.path}`;
     $('content').innerHTML = `
-      <div class="crumb">${file.path.slice(0, -1).map((p) => `<span>${p}</span>`).join(' / ')}</div>
+      <div class="crumb">${crumbOf([currentProv, ...file.path.slice(0, -1)])}</div>
       <div class="actions"><a href="${gh}" target="_blank" rel="noopener">在 GitHub 查看原文</a><a href="${file.path}" target="_blank" rel="noopener">下载原文件</a></div>
       <div class="markdown-body">${html}</div>`;
   } else {
     // 图片等其它文件：直接展示/链接
     $('content').innerHTML = `
-      <div class="crumb">${file.path.slice(0, -1).map((p) => `<span>${p}</span>`).join(' / ')}</div>
+      <div class="crumb">${crumbOf([currentProv, ...file.path.slice(0, -1)])}</div>
       <div class="markdown-body"><img src="${file.path}" alt="${file.name}"></div>`;
   }
 }
@@ -348,7 +357,7 @@ function renderSearchResults(hits) {
       const snip = idx >= 0 ? (idx > 30 ? '…' : '') + f.content.slice(Math.max(0, idx - 30), idx + currentQuery.length + 50).replace(/\n/g, ' ') + '…' : '文件名匹配';
       return `<div class="card" style="display:block;cursor:pointer" data-open="${f.path.join('/')}">
         <div style="display:flex;align-items:center;gap:8px"><span>📝</span><strong style="font-size:14px">${f.name.replace(/\.md$/i, '').replace(re, '<mark>$1</mark>')}</strong></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">${f.path.slice(0, -1).join(' / ')}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">${f.path.slice(0, -1).filter((p) => p !== '重点知识').join(' / ')}</div>
         <div style="font-size:12px;color:#64748b;margin-top:6px">${snip.replace(re, '<mark>$1</mark>')}</div>
       </div>`;
     })
@@ -369,21 +378,17 @@ function highlightSearch(html) {
   return html.replace(/<[^>]+>/g, (m) => '\x00' + m + '\x01').replace(re, '<mark>$1</mark>').replace(/\x00([\s\S]*?)\x01/g, '$1');
 }
 
-/* ===== 脑图视图（中心根节点，向两侧发散）===== */
+/* ===== 脑图视图（逻辑图：左根右枝，可拖拽平移）===== */
 function renderMindmap() {
   const root = currentProvObj().root;
   const mods = (root.children || []).filter((c) => c.type === 'dir');
-  const half = Math.ceil(mods.length / 2);
-  const rightMods = mods.slice(0, half);
-  const leftMods = mods.slice(half);
   $('content').className = 'content';
   $('content').innerHTML = `
-    <div class="mindmap-wrap">
+    <div class="mindmap-wrap" id="mm-wrap">
       <div class="mindmap">
-        <div class="mm-center">
-          <div class="mm-side left">${leftMods.map((m) => mmHtml(m, 1, ['重点知识', m.name], 'left')).join('')}</div>
-          <div class="mm-label root">${root.name}</div>
-          <div class="mm-side right">${rightMods.map((m) => mmHtml(m, 1, ['重点知识', m.name], 'right')).join('')}</div>
+        <div class="mmn right">
+          <div class="mm-label root">${currentProv}</div>
+          <div class="mmn-children">${mods.map((m) => mmHtml(m, 1, ['重点知识', m.name])).join('')}</div>
         </div>
       </div>
     </div>`;
@@ -397,8 +402,9 @@ function renderMindmap() {
       if (target) openDir(target.node, target.path);
     };
   });
+  bindPan($('mm-wrap'));
 }
-function mmHtml(node, depth, path, dir) {
+function mmHtml(node, depth, path) {
   const leaf = isKnowledgeLeaf(node);
   let cls = 'mm-label';
   if (depth === 1) cls += ' lv1';
@@ -412,9 +418,39 @@ function mmHtml(node, depth, path, dir) {
   const label = `<div class="${cls}"${style}${jump}>${node.name.replace(/\.md$/i, '')}</div>`;
   const kids = (node.children || []).filter((c) => c.type === 'dir');
   const children = kids.length
-    ? `<div class="mmn-children">${kids.map((c) => mmHtml(c, depth + 1, [...path, c.name], dir)).join('')}</div>`
+    ? `<div class="mmn-children">${kids.map((c) => mmHtml(c, depth + 1, [...path, c.name])).join('')}</div>`
     : '';
-  return `<div class="mmn ${dir}">${label}${children}</div>`;
+  return `<div class="mmn right">${label}${children}</div>`;
+}
+// 按住画布拖动平移
+function bindPan(wrap) {
+  if (!wrap) return;
+  let down = false;
+  let sx = 0;
+  let sy = 0;
+  let sl = 0;
+  let st = 0;
+  wrap.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('[data-jump]')) return;
+    down = true;
+    sx = e.clientX;
+    sy = e.clientY;
+    sl = wrap.scrollLeft;
+    st = wrap.scrollTop;
+    wrap.classList.add('dragging');
+    wrap.setPointerCapture(e.pointerId);
+  });
+  wrap.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    wrap.scrollLeft = sl - (e.clientX - sx);
+    wrap.scrollTop = st - (e.clientY - sy);
+  });
+  const end = () => {
+    down = false;
+    wrap.classList.remove('dragging');
+  };
+  wrap.addEventListener('pointerup', end);
+  wrap.addEventListener('pointercancel', end);
 }
 
 function switchView(v) {
@@ -437,7 +473,7 @@ async function init() {
     return;
   }
   if (!DATA.provinces || !DATA.provinces.length) {
-    $('content').innerHTML = '<div class="empty">暂无「重点知识」数据</div>';
+    $('content').innerHTML = '<div class="empty">暂无数据</div>';
     return;
   }
   currentProv = DATA.provinces[0].name;

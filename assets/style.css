@@ -169,13 +169,14 @@ body {
 .markdown-body mark { background: rgba(20,184,166,0.18); color: var(--ink); padding: 0 2px; border-radius: 2px; }
 .empty { color: var(--muted); text-align: center; padding: 60px 20px; }
 
-/* ===== Mindmap（中心根节点，向两侧发散）===== */
-.mindmap-wrap { width: 100%; height: 100%; overflow: auto; padding: 30px; background: var(--surface); border-radius: 12px; }
-.mindmap { display: inline-block; padding: 10px 0; }
-.mm-center { display: flex; align-items: center; gap: 40px; }
-.mm-side { display: flex; flex-direction: column; gap: 16px; }
-.mm-side.left { align-items: flex-end; }
-.mm-side.right { align-items: flex-start; }
+/* ===== Mindmap（逻辑图：左根右枝，可拖拽平移）===== */
+.mindmap-wrap {
+  width: 100%; height: 100%; overflow: auto; padding: 30px;
+  background: var(--surface); border-radius: 12px;
+  cursor: grab;
+}
+.mindmap-wrap.dragging { cursor: grabbing; }
+.mindmap { display: inline-block; padding: 10px 20px; user-select: none; }
 .mm-label {
   padding: 6px 14px; border-radius: 8px; font-size: 13px; background: var(--surface-2);
   border: 1px solid var(--rule); cursor: pointer; transition: all .15s; white-space: nowrap;
@@ -189,23 +190,14 @@ body {
 .mm-label.done { color: var(--green); border-style: dashed; border-color: var(--green); }
 .mm-label.pending { color: var(--muted); border-style: dashed; border-color: var(--rule); }
 .mmn { display: flex; align-items: center; }
-.mmn.left { flex-direction: row-reverse; }
 .mmn-children { display: flex; flex-direction: column; gap: 10px; position: relative; }
 .mmn.right > .mmn-children { margin-left: 22px; }
-.mmn.left > .mmn-children { margin-right: 22px; align-items: flex-end; }
 .mmn.right > .mmn-children > .mmn { position: relative; }
 .mmn.right > .mmn-children > .mmn::before {
   content: ''; position: absolute; left: -22px; top: 50%; width: 22px; height: 1px; background: var(--rule);
 }
-.mmn.left > .mmn-children > .mmn { position: relative; }
-.mmn.left > .mmn-children > .mmn::after {
-  content: ''; position: absolute; right: -22px; top: 50%; width: 22px; height: 1px; background: var(--rule);
-}
 .mmn.right > .mmn-children::before {
   content: ''; position: absolute; left: -11px; top: 14px; bottom: 14px; width: 1px; background: var(--rule);
-}
-.mmn.left > .mmn-children::before {
-  content: ''; position: absolute; right: -11px; top: 14px; bottom: 14px; width: 1px; background: var(--rule);
 }
 
 @media (max-width: 900px) {
