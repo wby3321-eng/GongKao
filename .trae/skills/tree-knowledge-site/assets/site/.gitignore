@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp files
+*~
+*.tmp
+*.bak
+~$*
+
+# CI 生成产物（部署时由 scripts/gen-data.py 生成，不提交）
+data.json
+xmind/
+
+# 本地预览 / 临时文件
+demo.html
+.trae-html-share-packages/

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识复习资料库</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">知</div>
+    <div>
+      <h1>知识复习资料库</h1>
+      <div class="sub">复习进度</div>
+    </div>
+  </div>
+  <div class="scope-pills" id="scope-pills"></div>
+  <div class="spacer"></div>
+  <div class="view-switch">
+    <button id="btn-knowledge" class="active">知识</button>
+    <button id="btn-mindmap">脑图</button>
+  </div>
+  <div class="search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="search-input" type="text" placeholder="搜索文件名 / 正文…">
+    <span id="search-count" class="count" style="display:none"></span>
+  </div>
+  <a class="btn" id="btn-xmind" href="#" download>⬇ 导出 xmind</a>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"><div class="tree" id="tree"></div></aside>
+  <main class="content" id="content"><div class="loading">加载中…</div></main>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
