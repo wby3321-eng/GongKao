@@ -99,7 +99,7 @@ function renderHome() {
         <div class="lbl" style="margin-top:6px">已完成 ${d.done} / 总 ${d.total} 个知识点</div>
       </div>
     </div>
-    <h2>${currentProv} · 模块</h2>
+    <h2>模块</h2>
     <div class="cards">${cards || '<div class="empty">暂无模块</div>'}</div>`;
   document.querySelectorAll('.card').forEach((c) => (c.onclick = () => openModule(c.dataset.module)));
 }
@@ -108,10 +108,10 @@ function renderHome() {
 function renderTree() {
   const prov = DATA.provinces.find((p) => p.name === currentProv);
   const ul = document.createElement('ul');
-  ul.appendChild(treeNode(prov.root, ['重点知识']));
+  (prov.root.children || []).forEach((c) => ul.appendChild(treeNode(c, ['重点知识', c.name])));
   $('tree').innerHTML = `
     <div class="group-title">
-      <span>${currentProv}</span>
+      <span>目录</span>
       <span class="tree-tools">
         <button type="button" data-act="expand">展开</button>
         <button type="button" data-act="collapse">收起</button>
@@ -132,9 +132,7 @@ function treeNode(node, path) {
   row.className = 'row';
   if (node.type === 'dir') {
     const n = countFiles(node);
-    // 根节点用省份名展示，不显示「重点知识」文字
-    const displayName = path.length === 1 ? currentProv : node.name;
-    row.innerHTML = `<span class="caret">▶</span><span class="ico">📁</span><span class="label">${displayName}</span>${n ? `<span class="meta">${n}</span>` : ''}`;
+    row.innerHTML = `<span class="caret">▶</span><span class="ico">📁</span><span class="label">${node.name}</span>${n ? `<span class="meta">${n}</span>` : ''}`;
     // 默认全部展开：子目录直接展示在父目录下方
     li.classList.add('open');
     row.querySelector('.caret').classList.add('open');
@@ -209,7 +207,7 @@ function openDir(node, path) {
     : `共 ${countFiles(node)} 篇笔记 · ${subs.length} 个子目录`;
   $('content').className = 'content doc';
   $('content').innerHTML = `
-    <div class="crumb">${crumbOf([currentProv, ...path])}</div>
+    <div class="crumb">${crumbOf(path)}</div>
     <div class="markdown-body">
       <h1>📁 ${node.name}</h1>
       <p style="color:var(--muted)">${stat}</p>
@@ -264,7 +262,7 @@ function openModule(name) {
   const mstat = prov.progress.modules.find((m) => m.name === name) || { done: 0, total: 0 };
   $('content').className = 'content doc';
   $('content').innerHTML = `
-    <div class="crumb">${currentProv} <span>/</span> ${name}</div>
+    <div class="crumb">${name}</div>
     <div class="markdown-body">
       <h1>${moduleMeta(name)[1]} ${name}</h1>
       <p style="color:var(--muted)">复习进度：${mstat.done} / ${mstat.total} 个知识点已归纳笔记</p>
@@ -286,13 +284,13 @@ function openFile(file) {
     const html = resolveImages(highlightSearch(marked.parse(file.content || '')), file.path);
     const gh = `https://github.com/wby3321-eng/GongKao/blob/main/${file.path}`;
     $('content').innerHTML = `
-      <div class="crumb">${crumbOf([currentProv, ...file.path.slice(0, -1)])}</div>
+      <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
       <div class="actions"><a href="${gh}" target="_blank" rel="noopener">在 GitHub 查看原文</a><a href="${file.path}" target="_blank" rel="noopener">下载原文件</a></div>
       <div class="markdown-body">${html}</div>`;
   } else {
     // 图片等其它文件：直接展示/链接
     $('content').innerHTML = `
-      <div class="crumb">${crumbOf([currentProv, ...file.path.slice(0, -1)])}</div>
+      <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
       <div class="markdown-body"><img src="${file.path}" alt="${file.name}"></div>`;
   }
 }
@@ -337,7 +335,7 @@ function renderTreeFiltered(hits) {
     return;
   }
   const ul = document.createElement('ul');
-  ul.appendChild(treeNode(root, ['重点知识']));
+  (root.children || []).forEach((c) => ul.appendChild(treeNode(c, ['重点知识', c.name])));
   ul.querySelectorAll('li').forEach((li) => li.classList.add('open'));
   ul.querySelectorAll('.caret').forEach((c) => c.classList.add('open'));
   $('tree').innerHTML = '';
@@ -387,7 +385,7 @@ function renderMindmap() {
     <div class="mindmap-wrap" id="mm-wrap">
       <div class="mindmap">
         <div class="mmn right">
-          <div class="mm-label root">${currentProv}</div>
+          <div class="mm-label root">📚</div>
           <div class="mmn-children">${mods.map((m) => mmHtml(m, 1, ['重点知识', m.name])).join('')}</div>
         </div>
       </div>
