@@ -27,6 +27,12 @@ jobs:
       - name: Generate data.json
         run: python3 scripts/gen-data.py
 
+      - name: Cache-bust assets
+        run: |
+          VER=$(cat assets/app.js assets/style.css | sha1sum | cut -c1-10)
+          sed -i "s|assets/style.css\"|assets/style.css?v=$VER\"|; s|assets/app.js\"|assets/app.js?v=$VER\"|" index.html
+          echo "asset version: $VER"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
