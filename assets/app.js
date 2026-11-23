@@ -454,10 +454,16 @@ function bindPan(wrap) {
 function switchView(v) {
   $('btn-knowledge').classList.toggle('active', v === 'knowledge');
   $('btn-mindmap').classList.toggle('active', v === 'mindmap');
-  $('sidebar').style.display = v === 'mindmap' ? 'none' : 'block';
+  const showTree = v === 'knowledge';
+  $('sidebar').style.display = showTree ? '' : 'none';
+  $('side-toggle').style.display = showTree ? '' : 'none';
   if (v === 'mindmap') renderMindmap();
   else currentFile ? openFile(currentFile) : renderHome();
 }
+$('side-toggle').onclick = () => {
+  const collapsed = $('layout').classList.toggle('collapsed');
+  $('side-toggle').querySelector('path').setAttribute('d', collapsed ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6');
+};
 $('btn-knowledge').onclick = () => switchView('knowledge');
 $('btn-mindmap').onclick = () => switchView('mindmap');
 
