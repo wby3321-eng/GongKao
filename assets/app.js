@@ -189,6 +189,16 @@ function revealPath(path) {
 function currentProvObj() {
   return DATA.provinces.find((p) => p.name === currentProv);
 }
+// 拼接含省份的完整仓库路径（file.path 可能是数组或字符串）
+function fullPathOf(file) {
+  const parts = Array.isArray(file.path) ? file.path : String(file.path).split('/');
+  if (parts[0] === currentProv) return parts.join('/');
+  return [currentProv, ...parts].join('/');
+}
+// 逐段编码，兼容中文与空格文件名
+function urlOf(relPath) {
+  return relPath.split('/').map(encodeURIComponent).join('/');
+}
 // 面包屑：去掉「重点知识」这一层
 function crumbOf(parts) {
   return parts
@@ -280,19 +290,21 @@ function openModule(name) {
 function openFile(file) {
   currentFile = file;
   $('content').className = 'content doc';
+  const rel = fullPathOf(file);
+  const url = urlOf(rel);
   if (/\.md$/i.test(file.name)) {
     const md = (file.content || '').replace(/^\s*\[TOC\]\s*$/im, '<!--TOC-->');
-    const html = resolveImages(highlightSearch(renderToc(marked.parse(md))), file.path);
-    const gh = `https://github.com/wby3321-eng/GongKao/blob/main/${file.path}`;
+    const html = resolveImages(highlightSearch(renderToc(marked.parse(md))), rel);
+    const gh = `https://github.com/wby3321-eng/GongKao/blob/main/${url}`;
     $('content').innerHTML = `
       <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
-      <div class="actions"><a href="${gh}" target="_blank" rel="noopener">在 GitHub 查看原文</a><a href="${file.path}" target="_blank" rel="noopener">下载原文件</a></div>
+      <div class="actions"><a href="${gh}" target="_blank" rel="noopener">在 GitHub 查看原文</a><a href="${url}" target="_blank" rel="noopener">下载原文件</a></div>
       <div class="markdown-body">${html}</div>`;
   } else {
     // 图片等其它文件：直接展示/链接
     $('content').innerHTML = `
       <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
-      <div class="markdown-body"><img src="${file.path}" alt="${file.name}"></div>`;
+      <div class="markdown-body"><img src="${url}" alt="${file.name}"></div>`;
   }
 }
 
@@ -321,7 +333,8 @@ function renderToc(html) {
 
 // 把 md 中相对图片路径解析为相对于文件所在目录（Pages 根路径）
 function resolveImages(html, filePath) {
-  const dir = filePath.slice(0, -1).join('/');
+  const parts = Array.isArray(filePath) ? filePath : String(filePath).split('/');
+  const dir = parts.slice(0, -1).map(encodeURIComponent).join('/');
   return html.replace(/<img([^>]*?)src="([^"]+)"/g, (m, pre, src) => {
     if (/^(https?:|\/|data:)/i.test(src)) return m;
     return `<img${pre}src="${dir ? dir + '/' : ''}${src}"`;
