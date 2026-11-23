@@ -125,7 +125,9 @@ function renderHome() {
 function renderTree() {
   const prov = DATA.provinces.find((p) => p.name === currentProv);
   const ul = document.createElement('ul');
-  (prov.root.children || []).forEach((c) => ul.appendChild(treeNode(c, ['重点知识', c.name])));
+  (prov.root.children || [])
+    .filter((c) => c.name !== '图片resource')
+    .forEach((c) => ul.appendChild(treeNode(c, ['重点知识', c.name])));
   $('tree').innerHTML = `
     <div class="group-title">
       <span>目录</span>
@@ -162,7 +164,9 @@ function treeNode(node, path) {
     // 先放父目录行，再放子目录列表，保证子目录在父目录下方
     li.appendChild(row);
     const ul = document.createElement('ul');
-    (node.children || []).forEach((c) => ul.appendChild(treeNode(c, [...path, c.name])));
+    (node.children || [])
+      .filter((c) => c.name !== '图片resource')
+      .forEach((c) => ul.appendChild(treeNode(c, [...path, c.name])));
     li.appendChild(ul);
     return li;
   } else {
@@ -376,6 +380,7 @@ $('search-input').addEventListener('input', (e) => {
 function renderTreeFiltered(hits) {
   const paths = new Set(hits.map((f) => f.path.join('/')));
   function keep(node, path) {
+    if (node.type === 'dir' && node.name === '图片resource') return null;
     const p = [...path, node.name];
     if (node.type === 'file') return paths.has(p.join('/'));
     const kids = (node.children || []).map((c) => keep(c, p)).filter(Boolean);
