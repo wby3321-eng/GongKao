@@ -3,6 +3,23 @@
 
 const $ = (id) => document.getElementById(id);
 
+// Markdown 渲染：markdown-it + 第三方插件（标题锚点 / 目录）
+const MD = (() => {
+  if (!window.markdownit) return null;
+  const md = window.markdownit({ html: true, linkify: true });
+  if (typeof window.markdownItAnchor === 'function') {
+    md.use(window.markdownItAnchor, { level: [1, 2, 3, 4, 5, 6] });
+  }
+  if (typeof window.markdownItTocDoneRight === 'function') {
+    md.use(window.markdownItTocDoneRight, { containerClass: 'md-toc', listType: 'ul', level: [1, 2, 3, 4, 5, 6] });
+  }
+  return md;
+})();
+function renderMarkdown(text) {
+  if (MD) return MD.render(text || '');
+  return `<pre>${String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`;
+}
+
 let DATA = null;
 let currentProv = null;
 let currentFile = null; // {name, ext, path, content}
@@ -293,8 +310,7 @@ function openFile(file) {
   const rel = fullPathOf(file);
   const url = urlOf(rel);
   if (/\.md$/i.test(file.name)) {
-    const md = (file.content || '').replace(/^\s*\[TOC\]\s*$/im, '<!--TOC-->');
-    const html = resolveImages(highlightSearch(renderToc(marked.parse(md))), rel);
+    const html = resolveImages(highlightSearch(renderMarkdown(file.content)), rel);
     const gh = `https://github.com/wby3321-eng/GongKao/blob/main/${url}`;
     $('content').innerHTML = `
       <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
@@ -306,29 +322,6 @@ function openFile(file) {
       <div class="crumb">${crumbOf(file.path.slice(0, -1))}</div>
       <div class="markdown-body"><img src="${url}" alt="${file.name}"></div>`;
   }
-}
-
-// [TOC] → 目录导航：仅收集占位符之后的标题（与 IDE 预览行为一致）
-function renderToc(html) {
-  const marker = '<!--TOC-->';
-  const at = html.indexOf(marker);
-  if (at === -1) return html;
-  const head = html.slice(0, at);
-  let body = html.slice(at + marker.length);
-  const items = [];
-  let i = 0;
-  body = body.replace(/<h([1-6])>([\s\S]*?)<\/h\1>/g, (m, lvl, inner) => {
-    const id = `toc-${i++}`;
-    items.push({ lvl: +lvl, text: inner.replace(/<[^>]+>/g, ''), id });
-    return `<h${lvl} id="${id}">${inner}</h${lvl}>`;
-  });
-  if (!items.length) return head + body;
-  const list = items.map((t, idx) => {
-    const hasChild = items[idx + 1] && items[idx + 1].lvl > t.lvl;
-    const tri = hasChild ? '<span class="tri">▼</span>' : '';
-    return `<a href="#${t.id}" style="padding-left:${(t.lvl - 1) * 16}px">${tri}${t.text}</a>`;
-  }).join('');
-  return head + `<nav class="md-toc">${list}</nav>` + body;
 }
 
 // 把 md 中相对图片路径解析为相对于文件所在目录（Pages 根路径）
