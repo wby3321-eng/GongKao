@@ -142,7 +142,7 @@ def module_progress(root: dict) -> list:
     """返回一级模块的进度列表。"""
     out = []
     for m in root.get("children", []):
-        if m.get("type") == "dir":
+        if m.get("type") == "dir" and m.get("name") != RESOURCE_DIR:
             p = progress_of(m)
             out.append({"name": m["name"], "total": p["total"], "done": p["done"]})
     return out
@@ -155,13 +155,24 @@ def to_topic(node: dict) -> dict:
     topic = {"id": new_id(), "title": node["name"]}
     if leaf:
         topic["markers"] = [{"markerId": "task-done" if done else "task-todo"}]
-    children = [c for c in node.get("children", []) if c.get("type") == "dir"]
+    children = [
+        c for c in node.get("children", [])
+        if c.get("type") == "dir" and c.get("name") != RESOURCE_DIR
+    ]
     if children:
         topic["children"] = {"attached": [to_topic(c) for c in children]}
     return topic
 
 
 def build_xmind(province: str, root: dict) -> bytes:
+    lv2 = [
+        c for c in root.get("children", [])
+        if c.get("type") == "dir" and c.get("name") != RESOURCE_DIR
+    ]
+    structure = (
+        "org.xmind.ui.org-chart.down" if len(lv2) <= 10
+        else "org.xmind.ui.logic.right"
+    )
     sheet = {
         "id": new_id(),
         "class": "sheet",
@@ -169,8 +180,8 @@ def build_xmind(province: str, root: dict) -> bytes:
         "rootTopic": {
             "id": new_id(),
             "title": f"{province} · {FOCUS}",
-            "structureClass": "org.xmind.ui.logic.right",
-            "children": {"attached": [to_topic(c) for c in root.get("children", [])]},
+            "structureClass": structure,
+            "children": {"attached": [to_topic(c) for c in lv2]},
         },
     }
     content_types = (

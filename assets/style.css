@@ -184,36 +184,60 @@ body {
 .markdown-body mark { background: rgba(20,184,166,0.18); color: var(--ink); padding: 0 2px; border-radius: 2px; }
 .empty { color: var(--muted); text-align: center; padding: 60px 20px; }
 
-/* ===== Mindmap（逻辑图：左根右枝，可拖拽平移）===== */
+/* ===== Mindmap（卡片式脑图，可拖拽平移）===== */
 .mindmap-wrap {
-  width: 100%; height: 100%; overflow: auto; padding: 30px;
+  width: 100%; height: 100%; overflow: auto; padding: 0;
   background: var(--surface); border-radius: 12px;
   cursor: grab;
 }
 .mindmap-wrap.dragging { cursor: grabbing; }
-.mindmap { display: inline-block; padding: 10px 20px; user-select: none; }
-.mm-label {
-  padding: 6px 14px; border-radius: 8px; font-size: 13px; background: var(--surface-2);
-  border: 1px solid var(--rule); cursor: pointer; transition: all .15s; white-space: nowrap;
+.mmtree {
+  position: relative; display: inline-block; min-width: 100%;
+  padding: 40px 60px 80px; user-select: none;
 }
-.mm-label:hover { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.mm-label.root {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff !important;
-  font-weight: 700; border: none; font-size: 14px; padding: 10px 20px; cursor: default;
+.mm-links { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; z-index: 0; }
+.mm-node { position: relative; z-index: 1; display: flex; }
+.mm-branches { display: flex; }
+/* 纵向：上根下枝（第二层目录 ≤ 10） */
+.mmtree.v .mm-node { flex-direction: column; align-items: center; }
+.mmtree.v .mm-branches {
+  flex-direction: row; align-items: flex-start; justify-content: center;
+  gap: 32px; padding-top: 48px;
 }
-.mm-label.lv1 { background: #fff; font-weight: 600; }
-.mm-label.done { color: var(--green); border-style: dashed; border-color: var(--green); }
-.mm-label.pending { color: var(--muted); border-style: dashed; border-color: var(--rule); }
-.mmn { display: flex; align-items: center; }
-.mmn-children { display: flex; flex-direction: column; gap: 10px; position: relative; }
-.mmn.right > .mmn-children { margin-left: 22px; }
-.mmn.right > .mmn-children > .mmn { position: relative; }
-.mmn.right > .mmn-children > .mmn::before {
-  content: ''; position: absolute; left: -22px; top: 50%; width: 22px; height: 1px; background: var(--rule);
+/* 横向：左根右枝（第二层目录 > 10） */
+.mmtree.h .mm-node { flex-direction: row; align-items: center; }
+.mmtree.h .mm-branches {
+  flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: 18px; padding-left: 48px;
 }
-.mmn.right > .mmn-children::before {
-  content: ''; position: absolute; left: -11px; top: 14px; bottom: 14px; width: 1px; background: var(--rule);
+.mm-card {
+  position: relative; padding: 8px 16px; border-radius: 10px; font-size: 13px;
+  background: #fff; border: 1px solid var(--rule); color: var(--ink);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .05); white-space: nowrap;
+  transition: box-shadow .15s, transform .15s, border-color .15s;
 }
+.mm-card.lv1 { font-weight: 600; padding: 10px 18px; }
+.mm-card.root { background: #f7f8fa; font-weight: 700; font-size: 14px; padding: 10px 22px; }
+.mm-card[data-jump] { cursor: pointer; }
+.mm-card[data-jump]:hover {
+  border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(16, 24, 40, .12);
+  transform: translateY(-1px);
+}
+.mm-dot {
+  position: absolute; top: -4px; right: -4px; width: 7px; height: 7px;
+  border-radius: 50%; border: 1.5px solid #fff;
+}
+.mm-dot.done { background: #22c55e; }
+.mm-dot.part { background: #f59e0b; }
+.mm-dot.none { background: #ef4444; }
+.mm-group {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: #fbfcfe; border: 1px solid #e9edf5; border-radius: 14px;
+}
+.mm-group-title { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 2px; }
+.mm-group-body { display: flex; flex-direction: column; gap: 8px; }
+.mm-group .mm-card { text-align: center; }
+.mm-group .mm-card:hover { box-shadow: 0 4px 12px rgba(16, 24, 40, .1); border-color: #cbd5e1; }
 
 @media (max-width: 900px) {
   .sidebar { width: 200px; }
